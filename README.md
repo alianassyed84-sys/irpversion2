@@ -65,7 +65,7 @@ Modern e-commerce enterprises (Amazon, Flipkart) process hundreds of thousands o
 | Metric / Capability | ReviewPulse (Our Engine) | Standard LLM (GPT-4o / Claude) | Real-World Advantage |
 | :--- | :---: | :---: | :--- |
 | **Response Latency** | `< 25ms` | `1,200ms – 2,500ms` | **48x to 100x Faster** — Instant interactive UI updates |
-| **Cost per 100,000 Reviews** | **$0.00** (Free, Local) | **$300.00 – $600.00** | **100% Cost Reduction** — Zero commercial API bills |
+| **Cost per 100,000 Reviews** | **$0.00** (Free, Local) | **$200.00 – $1,000.00** | **100% Cost Reduction** — Zero commercial API bills |
 | **External API Dependencies** | **None** (Pure Python Math) | High (Requires API Keys & Network) | Fully air-gapped, zero downtime, zero quota limits |
 | **Readability Auditing** | `5 Academic Formulas` | Hallucinated / Non-standard | Standardized academic rigor (Flesch, Fog, SMOG) |
 | **Dataset Capacity** | `3,600,000+ Reviews` | Token Window Constrained | Unlimited chunked streaming via `kagglehub` |
@@ -176,7 +176,7 @@ $$\text{SMOG} = 1.0430 \sqrt{\text{Polysyllables} \times \frac{30}{\text{Total S
 
 ### 7. Dynamic TF-IDF Semantic Topic Extraction
 Computes sublinear term-frequency weights across the review corpus to identify distinct n-grams (unigrams, bigrams, trigrams) without requiring external heavy models like spaCy or HuggingFace:
-$$\text{TF-IDF}(t, d, D) = \left(1 + \log(\text{TF}(t, d))\right) \times \log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1$$
+$$\text{TF-IDF}(t, d, D) = \left(1 + \log(\text{TF}(t, d))\right) \times \left(\log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1\right)$$
 
 ---
 
@@ -288,11 +288,11 @@ ReviewPulse is configured for split deployment:
 
 ### 1. Frontend: Deployed on [Vercel](https://vercel.com)
 - Live Production URL: [https://reviewpulse-peach.vercel.app/](https://reviewpulse-peach.vercel.app/)
-- Configured via root [`vercel.json`](file:///c:/Users/admin/Desktop/irppp/vercel.json) with client-side SPA routing rewrites.
+- Configured via root [`vercel.json`](vercel.json) with client-side SPA routing rewrites.
 - Built via Vite with gzip asset compression and CSS purge.
 
 ### 2. Backend: Ready for [Railway](https://railway.app) / [Render](https://render.com)
-- Configured via [`railway.json`](file:///c:/Users/admin/Desktop/irppp/railway.json) and [`render.yaml`](file:///c:/Users/admin/Desktop/irppp/render.yaml).
+- Configured via [`railway.json`](railway.json) and [`render.yaml`](render.yaml).
 - Production-grade Uvicorn ASGI server with connection pooling and CORS security guards.
 
 ---
