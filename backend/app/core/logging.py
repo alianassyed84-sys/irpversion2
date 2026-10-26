@@ -122,7 +122,7 @@ class RequestIdMiddleware:
                 break
 
         request_id = resolve_request_id(raw_header)
-        path = scope.get("path", "")
+        path = scope.get("path", "").encode("unicode_escape").decode("ascii")[:512]
         method = scope.get("method", "")
 
         # Set context variables for logging and downstream processing

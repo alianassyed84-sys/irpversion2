@@ -101,8 +101,11 @@ def get_client_identifier(request: Request) -> str:
     otherwise uses direct socket client IP to prevent spoofed X-Forwarded-For headers.
     """
     user = getattr(request.state, "user", None)
-    if user and getattr(user, "user_id", None):
-        return f"user:{user.user_id}"
+    if user:
+        if getattr(user, "user_id", None):
+            return f"user:{user.user_id}"
+        if isinstance(user, dict) and "sub" in user:
+            return f"user:{user['sub']}"
 
     # Do not blindly trust X-Forwarded-For without trusted proxy middleware
     client_host = request.client.host if request.client else "unknown"
@@ -133,7 +136,9 @@ class RateLimitChecker:
         max_requests, window_seconds = _parse_rate_limit(rule_str)
 
         client_id = get_client_identifier(request)
-        key = f"{self.tier_name}:{client_id}:{request.url.path}"
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", request.url.path)
+        key = f"{self.tier_name}:{client_id}:{route_path}"
 
         allowed, remaining, retry_after = _rate_limiter.check_and_record(
             key=key,

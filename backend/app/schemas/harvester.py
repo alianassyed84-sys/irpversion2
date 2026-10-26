@@ -44,6 +44,8 @@ class JobStartRequest(BaseModel):
     )
     max_reviews: int | None = Field(
         None,
+        ge=1,
+        le=1_000_000,
         description="Optional maximum number of reviews to import.",
     )
 

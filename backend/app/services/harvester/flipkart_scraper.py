@@ -194,8 +194,9 @@ class FlipkartReviewScraper:
         if status == 429:
             raise ProviderRateLimitError("Apify rate limit or quota exceeded")
 
-        # Fallback to standard start-and-poll run if sync endpoint returns non-200
-        return await self._run_apify_async_poll(headers, actor_input)
+        raise ProviderCommunicationError(
+            f"Apify sync run failed (HTTP {status}); aborting to prevent duplicate billing."
+        )
 
     async def _run_apify_async_poll(
         self,

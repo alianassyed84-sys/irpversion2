@@ -81,14 +81,16 @@ export default function Landing() {
       {/* 6. Feature cards */}
       <section id="features" className="mx-auto max-w-content scroll-mt-24 px-4 py-14 md:px-6 lg:px-10">
         <div data-scroll className="mb-8 max-w-2xl">
-          <h2 className="text-[28px] font-extrabold md:text-[32px]">Five lenses on every product</h2>
+          <h2 className="text-2xl font-extrabold md:text-3xl">Five lenses on every product</h2>
           <p className="mt-2 text-rp-muted">Each analysis page works from the same product, so findings connect.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {FEATURES.map(({ icon: Icon, title, text }) => (
             <Card key={title} interactive data-scroll>
-              <span className="mb-4 grid h-11 w-11 place-items-center rounded-2xl bg-rp-primary-light text-rp-primary"><Icon className="h-5 w-5" aria-hidden /></span>
-              <h3 className="text-[17px] font-bold">{title}</h3>
+              <span aria-hidden="true" className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-rp-primary-light text-rp-primary shadow-xs">
+                <Icon className="h-6 w-6 stroke-[2.25]" />
+              </span>
+              <h3 className="text-base font-bold text-rp-navy">{title}</h3>
               <p className="mt-1.5 text-sm text-rp-muted">{text}</p>
             </Card>
           ))}
@@ -97,41 +99,69 @@ export default function Landing() {
 
       {/* 7. Product-analysis preview */}
       <section className="mx-auto max-w-content px-4 pb-14 md:px-6 lg:px-10">
-        <Card tone="featured" data-scroll className="!p-6 md:!p-8">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[24px] font-extrabold">Product analysis preview</h2>
-              <p className="mt-1 text-sm text-rp-muted">{d.product.title}</p>
-            </div>
-            <Badge tone="warning"><FlaskConical className="h-3.5 w-3.5" aria-hidden /> Demo data</Badge>
+        {/* Section heading aligned with 40px grid margin */}
+        <div data-scroll className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-extrabold md:text-3xl">Product analysis preview</h2>
+            <p className="mt-1 text-sm text-rp-muted">{d.product.title}</p>
           </div>
+          <div
+            role="status"
+            aria-label="Demo data notice: The analysis shown below is simulated sample data."
+            className="flex items-center gap-2 rounded-full border border-amber-300/80 bg-amber-50/90 px-3 py-1 text-xs font-semibold text-amber-900 shadow-xs"
+          >
+            <FlaskConical className="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />
+            <span>Sample Demo Data</span>
+          </div>
+        </div>
+
+        <Card tone="featured" data-scroll className="!p-6 md:!p-8">
           <div className="grid gap-4 md:grid-cols-3">
-            {([['Positive', s.positive, 'bg-rp-success'], ['Neutral', s.neutral, 'bg-rp-muted'], ['Negative', s.negative, 'bg-rp-coral']] as const).map(([l, n, c]) => (
-              <div key={l} className="rounded-2xl border border-rp-border bg-rp-surface p-4">
-                <p className="text-[13px] font-semibold text-rp-muted">{l} reviews</p>
-                <p className="tnum mt-1 font-heading text-3xl font-extrabold">{pct(n, total)}%</p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-rp-primary-light"><div className={`h-full rounded-full ${c}`} style={{ width: `${pct(n, total)}%` }} /></div>
-              </div>
-            ))}
+            {([
+              ['Positive', s.positive, 'bg-rp-success', 'text-rp-success'],
+              ['Neutral', s.neutral, 'bg-amber-500', 'text-amber-700'],
+              ['Negative', s.negative, 'bg-rp-coral', 'text-rp-coral'],
+            ] as const).map(([l, n, c, tc]) => {
+              const percentage = pct(n, total);
+              return (
+                <div key={l} className="rounded-2xl border border-rp-border bg-rp-surface p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-rp-muted">{l} reviews</p>
+                    <span className={`text-xs font-bold ${tc}`}>{percentage}%</span>
+                  </div>
+                  <p className="tnum mt-1 font-heading text-3xl font-extrabold">{percentage}%</p>
+                  <div
+                    role="meter"
+                    aria-label={`${l} reviews proportion`}
+                    aria-valuenow={percentage}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="mt-3 h-2 overflow-hidden rounded-full bg-rp-border/80"
+                  >
+                    <div className={`h-full rounded-full transition-all duration-300 ${c}`} style={{ width: `${percentage}%` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            {d.topics!.slice(0, 5).map((t) => <Badge key={t.term} tone="primary"><Tag className="h-3 w-3" aria-hidden />{t.term}</Badge>)}
+            {d.topics!.slice(0, 5).map((t) => <Badge key={t.term} tone="primary"><Tag className="h-3 w-3" aria-hidden="true" />{t.term}</Badge>)}
           </div>
         </Card>
       </section>
 
       {/* 8. Workflow */}
       <section id="workflow" className="mx-auto max-w-content scroll-mt-24 px-4 pb-14 md:px-6 lg:px-10">
-        <h2 data-scroll className="mb-8 text-[28px] font-extrabold md:text-[32px]">From link to insight</h2>
+        <h2 data-scroll className="mb-8 text-2xl font-extrabold md:text-3xl">From link to insight</h2>
         <ol className="grid gap-4 md:grid-cols-4">
           {STEPS.map(({ icon: Icon, title, text }, i) => (
             <li key={title} data-scroll className="relative">
               <Card className="h-full">
                 <div className="mb-4 flex items-center justify-between">
-                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-rp-primary text-white"><Icon className="h-5 w-5" aria-hidden /></span>
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-rp-primary text-white"><Icon className="h-6 w-6 stroke-[2.25]" aria-hidden="true" /></span>
                   <span className="tnum font-heading text-2xl font-extrabold text-rp-primary-soft">0{i + 1}</span>
                 </div>
-                <h3 className="text-[17px] font-bold">{title}</h3>
+                <h3 className="text-base font-bold text-rp-navy">{title}</h3>
                 <p className="mt-1.5 text-sm text-rp-muted">{text}</p>
               </Card>
             </li>

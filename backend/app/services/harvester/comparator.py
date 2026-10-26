@@ -78,32 +78,42 @@ async def compare_product_platforms(
     if product is None:
         return None
 
-    # Fetch reviews for this product
-    rev_result = await session.execute(
-        select(Review, User)
-        .outerjoin(User, Review.user_id == User.user_id)
-        .where(Review.product_id == product_id)
-        .order_by(Review.id.desc())
-    )
-    review_rows = rev_result.all()
+    # Fetch reviews for this product separately per platform to ensure balanced representation
+    fk_condition = (Review.review_id.startswith("fk_")) | (Review.user_id.startswith("fk_"))
 
-    amz_reviews: list[PlatformReviewItem] = []
-    fk_reviews: list[PlatformReviewItem] = []
+    fk_rows = (
+        await session.execute(
+            select(Review, User)
+            .outerjoin(User, Review.user_id == User.user_id)
+            .where(Review.product_id == product_id, fk_condition)
+            .order_by(Review.id.desc())
+            .limit(50)
+        )
+    ).all()
 
-    for rev, user in review_rows:
+    amz_rows = (
+        await session.execute(
+            select(Review, User)
+            .outerjoin(User, Review.user_id == User.user_id)
+            .where(Review.product_id == product_id, ~fk_condition)
+            .order_by(Review.id.desc())
+            .limit(50)
+        )
+    ).all()
+
+    def _to_platform_item(rev: Review, user: User | None) -> PlatformReviewItem:
         uname = user.user_name if user and user.user_name else "Verified Buyer"
-        item = PlatformReviewItem(
+        return PlatformReviewItem(
             reviewer=uname,
-            rating=rev.rating or 5.0,
+            rating=rev.rating if rev.rating is not None else 0.0,
             title=rev.review_title or "Verified Purchase Review",
             content=rev.review_content or "(No review text provided)",
             date=rev.created_at.strftime("%b %d, %Y") if rev.created_at else "Recently",
             verified=True,
         )
-        if rev.review_id.startswith("fk_") or (rev.user_id and rev.user_id.startswith("fk_")):
-            fk_reviews.append(item)
-        else:
-            amz_reviews.append(item)
+
+    fk_reviews = [_to_platform_item(r, u) for r, u in fk_rows]
+    amz_reviews = [_to_platform_item(r, u) for r, u in amz_rows]
 
     # Base pricing
     base_price = float(product.discounted_price) if product.discounted_price is not None else 1999.0
@@ -136,7 +146,7 @@ async def compare_product_platforms(
                 reviewer="Prateek Sharma",
                 rating=4.5,
                 title="Great value for money",
-                content=f"Works as described. Authentic unit with original serial number verified online.",
+                content="Works as described. Authentic unit with original serial number verified online.",
                 date="Apr 28, 2024",
                 verified=True,
             ),

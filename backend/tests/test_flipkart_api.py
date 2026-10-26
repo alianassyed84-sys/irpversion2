@@ -49,6 +49,8 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.mark.anyio
 async def test_scrape_flipkart_success(async_session: AsyncSession) -> None:
     settings = Settings(
+        _env_file=None,
+        apify_token=None,
         database_url="sqlite+aiosqlite:///:memory:",
         app_env="development",
         auth_enabled=False,
@@ -114,6 +116,8 @@ async def test_scrape_flipkart_success(async_session: AsyncSession) -> None:
 @pytest.mark.anyio
 async def test_scrape_flipkart_rejects_invalid_url(async_session: AsyncSession) -> None:
     settings = Settings(
+        _env_file=None,
+        apify_token=None,
         database_url="sqlite+aiosqlite:///:memory:",
         app_env="development",
         auth_enabled=False,
@@ -139,6 +143,8 @@ async def test_scrape_flipkart_rejects_invalid_url(async_session: AsyncSession) 
 @pytest.mark.anyio
 async def test_analyze_url_supports_flipkart(async_session: AsyncSession) -> None:
     settings = Settings(
+        _env_file=None,
+        apify_token=None,
         database_url="sqlite+aiosqlite:///:memory:",
         app_env="development",
         auth_enabled=False,

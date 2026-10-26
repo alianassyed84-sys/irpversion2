@@ -24,7 +24,10 @@ async def import_kaggle_dataset(max_reviews: int | None = None) -> None:
         print("Error: AMAZON_CSV_PATH is not configured.")
         return
 
-    print(f"Connecting to database: {settings.database_url}")
+    from sqlalchemy.engine import make_url
+
+    masked_url = make_url(settings.database_url).render_as_string(hide_password=True)
+    print(f"Connecting to database: {masked_url}")
     engine = get_engine(settings.database_url, settings=settings)
 
     # Ensure tables exist

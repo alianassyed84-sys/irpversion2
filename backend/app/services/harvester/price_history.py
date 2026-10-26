@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
@@ -167,6 +167,10 @@ async def get_price_history(
     Validates date filtering and ensures multi-currency data is not combined
     into misleading comparisons.
     """
+    if start_date is not None and start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    if end_date is not None and end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=timezone.utc)
     if start_date is not None and end_date is not None and start_date > end_date:
         raise ValueError("start_date cannot be after end_date.")
 

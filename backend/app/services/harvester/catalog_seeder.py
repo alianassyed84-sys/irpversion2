@@ -30,7 +30,7 @@ from app.services.harvester.importer import (
     upsert_review,
     upsert_user,
 )
-from app.services.harvester.price_history import record_price_snapshot
+from app.services.harvester.price_history import get_price_history, record_price_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -455,26 +455,19 @@ async def seed_catalog(session: AsyncSession) -> int:
             prod_obj.product_link = norm_product.product_link
             seeded_count += 1
 
-        # Record baseline price snapshot
+        # Record baseline price snapshot if not yet present
         if item["discounted_price"]:
-            await record_price_snapshot(
-                session=session,
-                product_id=item["product_id"],
-                price=item["discounted_price"],
-                original_price=item["actual_price"],
-                currency="INR",
-                source="amazon_catalog",
-            )
-            # Flipkart price snapshot (slightly differentiated)
-            fk_price = item["discounted_price"] - Decimal("990.00")
-            if fk_price > 0:
+            has_history = (
+                await get_price_history(session, item["product_id"])
+            ).observations_count > 0
+            if not has_history:
                 await record_price_snapshot(
                     session=session,
                     product_id=item["product_id"],
-                    price=fk_price,
+                    price=item["discounted_price"],
                     original_price=item["actual_price"],
                     currency="INR",
-                    source="flipkart_catalog",
+                    source="amazon_catalog",
                 )
 
         # Insert reviews

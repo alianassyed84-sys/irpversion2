@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Annotated, Any
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import Settings, get_settings
@@ -22,6 +23,12 @@ logger = logging.getLogger(__name__)
 # Reusable HTTP Bearer extractor that does not raise automatically,
 # allowing us to return custom, standards-compliant 401 error headers.
 http_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+@lru_cache(maxsize=4)
+def _get_jwk_client(url: str) -> jwt.PyJWKClient:
+    """Cache PyJWKClient instance to prevent blocking synchronous HTTP fetches per request."""
+    return jwt.PyJWKClient(url, cache_keys=False, lifespan=3600)
 
 
 @dataclass(frozen=True)
@@ -50,9 +57,11 @@ class TokenVerifier:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self._jwk_client: jwt.PyJWKClient | None = None
-        if self.settings.clerk_jwks_url:
-            self._jwk_client = jwt.PyJWKClient(self.settings.clerk_jwks_url)
+        self._jwk_client = (
+            _get_jwk_client(self.settings.clerk_jwks_url)
+            if self.settings.clerk_jwks_url
+            else None
+        )
 
     def verify_token(self, token: str) -> dict[str, Any]:
         """Verify token signature and return validated payload claims."""
@@ -72,8 +81,7 @@ class TokenVerifier:
             }
 
         try:
-            unverified_headers = jwt.get_unverified_header(token)
-            algorithm = unverified_headers.get("alg", "RS256")
+            jwt.get_unverified_header(token)
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,7 +101,14 @@ class TokenVerifier:
             signing_key = _format_pem_key(self.settings.clerk_pem_public_key)
             algorithms.append("RS256")
         elif self._jwk_client is not None:
-            signing_key = self._jwk_client.get_signing_key_from_jwt(token).key
+            try:
+                signing_key = self._jwk_client.get_signing_key_from_jwt(token).key
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token key ID or key unavailable.",
+                    headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
+                ) from exc
             algorithms.append("RS256")
         elif self.settings.clerk_secret_key:
             # Fallback for development/testing symmetric verification
@@ -109,7 +124,7 @@ class TokenVerifier:
             )
 
         decode_kwargs: dict[str, Any] = {
-            "algorithms": algorithms if algorithm in algorithms else [algorithm],
+            "algorithms": algorithms,
             "options": {"verify_signature": True, "verify_exp": True},
         }
 
@@ -223,6 +238,7 @@ def _extract_user_from_claims(claims: dict[str, Any]) -> AuthenticatedUser:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[
         HTTPAuthorizationCredentials | None, Depends(http_bearer_scheme)
     ],
@@ -241,7 +257,9 @@ async def get_current_user(
 
     verifier = TokenVerifier(settings)
     claims = verifier.verify_token(credentials.credentials)
-    return _extract_user_from_claims(claims)
+    user = _extract_user_from_claims(claims)
+    request.state.user = user
+    return user
 
 
 async def require_admin(
