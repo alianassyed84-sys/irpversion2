@@ -65,16 +65,15 @@ class TokenVerifier:
 
     def verify_token(self, token: str) -> dict[str, Any]:
         """Verify token signature and return validated payload claims."""
+        has_clerk_keys = bool(
+            self.settings.clerk_pem_public_key
+            or self.settings.clerk_jwks_url
+            or self.settings.clerk_secret_key
+        )
         if not self.settings.auth_enabled or (
-            self.settings.app_env == "development"
-            and not (
-                self.settings.clerk_pem_public_key
-                or self.settings.clerk_jwks_url
-                or self.settings.clerk_secret_key
-            )
-            and token in ("dev-bypass-token", "dev-token")
+            not has_clerk_keys and token in ("dev-bypass-token", "dev-token")
         ):
-            # When explicitly disabled or running local dev without Clerk keys
+            # When explicitly disabled or running without configured Clerk keys
             return {
                 "sub": "test_user_anonymous",
                 "role": "admin",

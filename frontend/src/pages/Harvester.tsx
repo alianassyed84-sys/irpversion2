@@ -99,7 +99,10 @@ export default function Harvester() {
   });
 
   const err = analyzeQuery.error as ApiError | null;
+  const fkErr = flipkartMutation.error as ApiError | null;
+  const activeError = err || fkErr;
   const analysisData = analyzeQuery.data;
+  const previewProduct = analysisData?.product || fkResult?.product;
 
   // Stages reflect genuine states from the server
   const stages: Stage[] = [
@@ -116,7 +119,7 @@ export default function Harvester() {
         ? 'active'
         : analyzeQuery.isSuccess || fkResult
           ? 'done'
-          : err || flipkartMutation.error
+          : activeError
             ? 'error'
             : submitted?.valid
               ? 'pending'
@@ -127,8 +130,8 @@ export default function Harvester() {
           ? `Product ${analysisData?.asin} resolved successfully`
           : fkResult
             ? `Exported ${fkResult.reviews_count} reviews (${fkResult.is_mock_provider ? 'Simulation' : 'Apify Live'})`
-            : err
-              ? `${err.message}${err.requestId ? ` (Req ID: ${err.requestId.slice(0, 8)})` : ''}`
+            : activeError
+              ? `${activeError.message}${activeError.requestId ? ` (Req ID: ${activeError.requestId.slice(0, 8)})` : ''}`
               : submitted?.valid
                 ? 'Ready to query backend.'
                 : undefined,
@@ -264,6 +267,8 @@ export default function Harvester() {
                   rawUrl && rawUrl.includes('flipkart.com')
                     ? rawUrl
                     : 'https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4?pid=MOBGTAGPNRQA7CS3';
+                setRawUrl(target);
+                setSubmitted(parseProductUrl(target));
                 flipkartMutation.mutate(target);
               }}
             >
@@ -351,14 +356,18 @@ export default function Harvester() {
             title="Analysis progress"
             subtitle="Real states only; nothing is simulated"
             action={
-              submitted?.valid && (
+              (submitted?.valid || fkResult) && (
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    void analyzeQuery.refetch();
+                    if (rawUrl && rawUrl.includes('flipkart.com')) {
+                      flipkartMutation.mutate(rawUrl);
+                    } else {
+                      void analyzeQuery.refetch();
+                    }
                     void health.refetch();
                   }}
-                  loading={analyzeQuery.isFetching || health.isFetching}
+                  loading={analyzeQuery.isFetching || flipkartMutation.isPending || health.isFetching}
                 >
                   Retry
                 </Button>
@@ -366,7 +375,7 @@ export default function Harvester() {
             }
           />
           <AnalysisProgress stages={stages} />
-          {submitted?.valid && (
+          {(submitted?.valid || activeError) && (
             <p className="mt-4 rounded-2xl bg-rp-surface-soft p-3.5 text-sm text-rp-muted">
               Backend at <code className="rounded bg-rp-primary-light px-1.5 py-0.5 text-[13px]">{API_BASE_URL}</code>{' '}
               is{' '}
@@ -377,7 +386,7 @@ export default function Harvester() {
               ) : (
                 <b className="text-rp-success">reachable</b>
               )}
-              .{err && <span className="block mt-1 font-semibold text-rp-coral">{err.message}</span>}
+              .{activeError && <span className="block mt-1 font-semibold text-rp-coral">{activeError.message}</span>}
             </p>
           )}
         </Card>
@@ -385,9 +394,9 @@ export default function Harvester() {
         <div className="space-y-6">
           <Card data-reveal>
             <CardHeader title="Product preview" />
-            {analysisData?.product ? (
+            {previewProduct ? (
               <div className="space-y-4">
-                <ProductCard product={adaptProduct(analysisData.product)} />
+                <ProductCard product={adaptProduct(previewProduct)} />
                 <div className="flex justify-end">
                   <Link
                     to={ROUTES.analysis}
@@ -397,10 +406,10 @@ export default function Harvester() {
                   </Link>
                 </div>
               </div>
-            ) : err ? (
+            ) : activeError ? (
               <UnavailableState
                 title="Analysis could not be completed"
-                description={err.message}
+                description={activeError.message}
               />
             ) : (
               <UnavailableState
