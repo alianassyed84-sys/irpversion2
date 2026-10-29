@@ -117,6 +117,28 @@ def _require_db(settings: Settings) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Catalog Seeding
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/seed",
+    summary="Seed full product catalog and reviews from bundled fixture",
+    tags=["harvester"],
+)
+async def seed_endpoint(
+    settings: SettingsDep,
+    db: DbDep,
+) -> dict[str, Any]:
+    _require_db(settings)
+    assert db is not None
+    from app.services.harvester.catalog_seeder import seed_catalog
+
+    count = await seed_catalog(db)
+    return {"status": "ok", "products_seeded": count}
+
+
+# ---------------------------------------------------------------------------
 # Job management
 # ---------------------------------------------------------------------------
 

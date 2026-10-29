@@ -245,8 +245,12 @@ async def list_products(
 
 
 async def get_product_by_id(session: AsyncSession, product_id: str) -> Product | None:
+    clean_id = (product_id or "").strip()
     result = await session.execute(
-        select(Product).where(Product.product_id == product_id)
+        select(Product).where(
+            (Product.product_id == clean_id)
+            | (Product.product_link.ilike(f"%{clean_id}%"))
+        )
     )
     return result.scalar_one_or_none()
 

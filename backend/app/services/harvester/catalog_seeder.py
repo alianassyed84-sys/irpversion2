@@ -9,14 +9,18 @@ pricing, and reviews across both Amazon and Flipkart.
 from __future__ import annotations
 
 import asyncio
+import gzip
+import json
 import logging
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_sessionmaker
+from app.models.price_snapshot import PriceSnapshot
 from app.models.product import Product
 from app.models.review import Review
 from app.models.user import User
@@ -491,9 +495,85 @@ async def seed_catalog(session: AsyncSession) -> int:
                 ),
             )
 
+    await _seed_fixture_if_needed(session)
     await session.commit()
-    logger.info("Successfully seeded %d categorized products", seeded_count)
-    return seeded_count
+    final_count = (await session.scalar(select(func.count()).select_from(Product))) or seeded_count
+    logger.info("Successfully verified/seeded %d categorized products", final_count)
+    return final_count
+
+
+async def _seed_fixture_if_needed(session: AsyncSession) -> int:
+    """Populate full 61-product catalog + reviews from bundled compressed fixture if DB is sparse."""
+    prod_count = (await session.scalar(select(func.count()).select_from(Product))) or 0
+    if prod_count >= 60:
+        return 0
+
+    fixture_path = Path(__file__).parent / "catalog_fixture.json.gz"
+    if not fixture_path.exists():
+        return 0
+
+    try:
+        with gzip.open(fixture_path, "rt", encoding="utf-8") as f:
+            data = json.load(f)
+
+        existing_pids = set((await session.scalars(select(Product.product_id))).all())
+        new_products = [
+            Product(
+                product_id=p["product_id"],
+                product_name=p["product_name"],
+                category=p["category"],
+                discounted_price=Decimal(str(p["discounted_price"])) if p.get("discounted_price") is not None else None,
+                actual_price=Decimal(str(p["actual_price"])) if p.get("actual_price") is not None else None,
+                discount_percentage=p.get("discount_percentage"),
+                rating=p.get("rating"),
+                rating_count=p.get("rating_count"),
+                about_product=p.get("about_product"),
+                img_link=p.get("img_link"),
+                product_link=p.get("product_link"),
+            )
+            for p in data.get("products", [])
+            if p["product_id"] not in existing_pids
+        ]
+        if new_products:
+            session.add_all(new_products)
+            await session.flush()
+
+        existing_uids = set((await session.scalars(select(User.user_id))).all())
+        new_users = [
+            User(user_id=u["user_id"], user_name=u.get("user_name"))
+            for u in data.get("users", [])
+            if u["user_id"] not in existing_uids
+        ]
+        if new_users:
+            session.add_all(new_users)
+            await session.flush()
+
+        existing_rids = set((await session.scalars(select(Review.review_id))).all())
+        new_reviews = [
+            Review(
+                review_id=r["review_id"],
+                product_id=r["product_id"],
+                user_id=r.get("user_id"),
+                rating=r.get("rating"),
+                review_title=r.get("review_title"),
+                review_content=r.get("review_content"),
+            )
+            for r in data.get("reviews", [])
+            if r["review_id"] not in existing_rids
+        ]
+        if new_reviews:
+            session.add_all(new_reviews)
+            await session.flush()
+
+        logger.info(
+            "Seeded %d extra products and %d reviews from catalog fixture",
+            len(new_products),
+            len(new_reviews),
+        )
+        return len(new_products)
+    except Exception as exc:
+        logger.warning("Failed to load catalog fixture: %s", exc)
+        return 0
 
 
 async def run_cli() -> None:
