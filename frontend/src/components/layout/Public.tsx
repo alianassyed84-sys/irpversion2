@@ -7,16 +7,21 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-rp-border/70 bg-rp-bg/85 backdrop-blur-md">
       <div className="mx-auto flex h-[76px] max-w-content items-center justify-between px-4 md:px-6 lg:px-10">
-        <Logo />
+        <div className="flex items-center gap-3">
+          <Logo />
+          <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-rp-primary/30 bg-rp-primary-light/60 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-rp-primary">
+            Flow AI v2.4
+          </span>
+        </div>
         <nav aria-label="Landing" className="hidden items-center gap-7 text-sm font-semibold text-rp-text md:flex">
-          <a href="/#features" className="hover:text-rp-primary">Features</a>
-          <a href="/#workflow" className="hover:text-rp-primary">How it works</a>
-          <a href="/#trust" className="hover:text-rp-primary">Data & trust</a>
-          <Link to={ROUTES.about} className="hover:text-rp-primary">Docs</Link>
+          <a href="/#features" className="hover:text-rp-primary transition-colors">Superpowers</a>
+          <a href="/#workflow" className="hover:text-rp-primary transition-colors">Neural Pipeline</a>
+          <a href="/#trust" className="hover:text-rp-primary transition-colors">Data Honesty</a>
+          <Link to={ROUTES.about} className="hover:text-rp-primary transition-colors">Architecture</Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link to={ROUTES.login} className="hidden min-h-[44px] items-center rounded-btn px-4 text-sm font-semibold hover:bg-rp-primary-light sm:inline-flex">Log in</Link>
-          <Link to={ROUTES.dashboard}><Button>Open app</Button></Link>
+          <Link to={ROUTES.dashboard}><Button className="shadow-lift">Launch App →</Button></Link>
         </div>
       </div>
     </header>

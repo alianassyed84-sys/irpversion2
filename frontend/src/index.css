@@ -49,3 +49,13 @@
       radial-gradient(40% 40% at 5% 20%, rgba(243,107,87,.08), transparent 70%);
   }
 }
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
